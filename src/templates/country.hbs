@@ -1,0 +1,15 @@
+<h1 class='name'>{{name}}</h1>
+<div class='container'>
+  <div class='wrapper'>
+    <li class='list__items'>Capital: <span class='text'>{{capital}}</span></li>
+    <li class='list__items'>Population:
+      <span class='text'>{{population}}</span></li>
+    <li class='list__items'>Languages:
+      <ul>
+        {{#each languages}}
+          <li class='list__items-low'>{{name}}</li>
+        {{/each}}
+      </ul>
+    </li></div>
+  <div class='wrapper'><img src={{flag}} /></div>
+</div>

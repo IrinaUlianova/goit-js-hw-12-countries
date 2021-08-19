@@ -1,62 +1,53 @@
-/*
- * - Пагинация
- *   - страница и кол-во на странице
- * - Загружаем статьи при сабмите формы
- * - Загружаем статьи при нажатии на кнопку «Загрузить еще»
- * - Обновляем страницу в параметрах запроса
- * - Рисуем статьи
- * - Сброс значения при поиске по новому критерию
- *
- * https://newsapi.org/
- * 4330ebfabc654a6992c2aa792f3173a3
- * http://newsapi.org/v2/everything?q=cat&language=en&pageSize=5&page=1
- */
+import fetchCountries from './js/fetchCountries';
+import countryTemplate from './templates/country.hbs';
+import debounce from 'lodash.debounce';
+import error from './js/notify';
+import '@pnotify/core/dist/Material.css';
 
-import articlesTpl from './templates/articles.hbs';
-import './css/common.css';
-import NewsApiService from './js/news-service';
-import LoadMoreBtn from './js/components/load-more-btn';
+// refs
+// const formInputRef = document.querySelector('.form-input'); // др.вар. - очистка инпута
+const inputRef = document.getElementById('searchQuery');
+const cardContainerRef = document.querySelector('.js-container');
 
-const refs = {
-  searchForm: document.querySelector('.js-search-form'),
-  articlesContainer: document.querySelector('.js-articles-container'),
-};
-const loadMoreBtn = new LoadMoreBtn({
-  selector: '[data-action="load-more"]',
-  hidden: true,
-});
-const newsApiService = new NewsApiService();
+inputRef.addEventListener('input', debounce(onInput, 500));
 
-refs.searchForm.addEventListener('submit', onSearch);
-loadMoreBtn.refs.button.addEventListener('click', fetchArticles);
+function makeMarkup(array) {
+  if (array.length > 10) {
+    cardContainerRef.innerHTML = '';
+    error({
+      text: 'слишком много совпадений, продолжи ввод',
+      type: 'error',
+      autoOpen: 'false',
+      width: '400px',
+      delay: 3000,
+      animation: 'fade',
+    });
+    return;
+  } else if (array.length >= 2 && array.length <= 10) {
+    let items = array
+      .map(country => {
+        return `<li>${country.name}</li>`;
+      })
+      .join('');
 
-function onSearch(e) {
+    cardContainerRef.innerHTML = `<ul>${items}</ul>`;
+  } else if (array.length === 1) {
+    const markup = countryTemplate(array[0]);
+    cardContainerRef.innerHTML = markup;
+  }
+}
+
+function onInput(e) {
   e.preventDefault();
-
-  newsApiService.query = e.currentTarget.elements.query.value;
-
-  if (newsApiService.query === '') {
-    return alert('Введи что-то нормальное');
+  const searchQuery = inputRef.value;
+  if (searchQuery === '') {
+    return;
   }
 
-  loadMoreBtn.show();
-  newsApiService.resetPage();
-  clearArticlesContainer();
-  fetchArticles();
-}
-
-function fetchArticles() {
-  loadMoreBtn.disable();
-  newsApiService.fetchArticles().then(articles => {
-    appendArticlesMarkup(articles);
-    loadMoreBtn.enable();
-  });
-}
-
-function appendArticlesMarkup(articles) {
-  refs.articlesContainer.insertAdjacentHTML('beforeend', articlesTpl(articles));
-}
-
-function clearArticlesContainer() {
-  refs.articlesContainer.innerHTML = '';
+  fetchCountries(searchQuery)
+    .then(makeMarkup)
+    .catch(error => {
+      cardContainerRef.innerHTML = '';
+      inputRef.value = '';
+    });
 }
